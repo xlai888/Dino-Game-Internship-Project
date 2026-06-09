@@ -6,11 +6,17 @@ Made by intern: @bassemfarid, no one or nothing else. 🤖
 
 import pygame
 
+def display_score():
+    current_time = pygame.time.get_ticks() - start_time #gets time in milliseconds
+    score_surf = game_font.render(current_time, False, "Black") #USE F STRING?
+    score_rect = score_surf.get_rect(center = (400,50))
+    screen.blit = (score_surf, score_rect)
 # Initialize Pygame and create a window
 pygame.init()
 screen = pygame.display.set_mode((800, 400))
 clock = pygame.time.Clock()
 running = True  # Pygame main loop, kills pygame when False
+start_time = 0
 
 # Game state variables
 is_playing = True  # Whether in game or in menu
@@ -22,8 +28,8 @@ players_gravity_speed = 0  # The current speed at which the player falls
 SKY_SURF = pygame.image.load("graphics/level/sky.png").convert()
 GROUND_SURF = pygame.image.load("graphics/level/ground.png").convert()
 game_font = pygame.font.Font(pygame.font.get_default_font(), 50)
-score_surf = game_font.render("SCORE?", False, "Black")
-score_rect = score_surf.get_rect(center=(400, 50))
+#score_surf = game_font.render("SCORE?", False, "Black")
+#score_rect = score_surf.get_rect(center=(400, 50))
 
 # Load sprite assets
 player_surf = pygame.image.load("graphics/player/player_walk_1.png").convert_alpha()
@@ -52,6 +58,7 @@ while running:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 is_playing = True
                 egg_rect.left = 800
+                start_time = pygame.time.get_ticks()
 
     if is_playing:
         screen.fill("purple")  # Wipe the screen
