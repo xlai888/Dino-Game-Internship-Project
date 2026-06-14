@@ -7,6 +7,7 @@ Made by intern: @bassemfarid, no one or nothing else. 🤖
 import pygame
 from random import randint
 from pygame import mixer
+from operator import itemgetter
 
 def display_score():
     global lives, invincibility_timer
@@ -14,7 +15,7 @@ def display_score():
     score_surf = game_font.render(f"Score: {current_time}", False, "Black") 
     score_rect = score_surf.get_rect(center = (400,50))
     #screen.blit(score_surf, score_rect)
-    menu_surf = small_font.render("Pause (P)", False, "Black")
+    menu_surf = small_font.render("Escape (E)", False, "Black")
     menu_rect = menu_surf.get_rect(center = (710, 25))
     screen.blit(menu_surf, menu_rect)
     pygame.draw.rect(screen, "#c0e8ec", score_rect)
@@ -23,7 +24,7 @@ def display_score():
     return current_time 
 
 def obstacle_movement(obstacle_list):
-    global is_playing, lives, invincibility_timer
+    global is_playing, lives, invincibility_timer, game_state
     if obstacle_list:
         for obstacle_rect in obstacle_list:
             obstacle_rect.x -= int(5+ (pygame.time.get_ticks() - start_time)//10000)
@@ -38,6 +39,7 @@ def obstacle_movement(obstacle_list):
                     invincibility_timer = 40
                 if lives <= 0:
                     is_playing = False
+                    game_state = "game_over"
         obstacle_list = [obstacle for obstacle in obstacle_list if obstacle.x > -100]
         return obstacle_list
     else:
@@ -106,32 +108,34 @@ score = 0
 
 # Game state variables
 is_playing = False  # Whether in game or in menu
+game_state = "menu"
 GROUND_Y = 300  # The Y-coordinate of the ground level
 PLAYER_FLOOR = 340
 JUMP_GRAVITY_START_SPEED = -20  # The speed at which the player jumps, negative moves up
 fish_gravity_speed = 0  # The current speed at which the player falls
 lives = 3
 invincibility_timer = 0
+can_double_jump = False
 #HOW TO CHANGE FONT SO IT IS NOT IN SYSFONT?
-game_font = pygame.font.SysFont("impact", 50)
-small_font = pygame.font.SysFont("comic sans ms", 30)
+game_font = pygame.font.SysFont("bahnschrift", 50)
+small_font = pygame.font.SysFont("bahnschrift", 30)
 
 
 
 
-# Load level assets
+# backgrounds
 SKY_SURF = pygame.image.load("graphics/ocean_top.png").convert()
 SKY_SURF = pygame.transform.scale(SKY_SURF, (800, 400))
 MENU_SURF = pygame.image.load("graphics/menu_pic.png").convert()
 MENU_SURF = pygame.transform.scale(MENU_SURF, (800, 400))
 baby_shark = pygame.mixer.Sound("graphics/shark/baby_shark.mp3")
-baby_shark.play( loops = -1 )
+#baby_shark.play( loops = -1 )
 jump_sound = pygame.mixer.Sound("graphics/bubbles/bubbles.mp3")
 score_surf = game_font.render("SCORE?", False, "Black")
 score_rect = score_surf.get_rect(center=(400, 50))
 
 
-# Load sprite assets
+# sprites
 fish_move_1 = pygame.image.load("graphics/fish/fish.png").convert_alpha()
 fish_move_2 = pygame.image.load("graphics/fish/fish_move_2.png").convert_alpha()
 fish_move = [fish_move_1, fish_move_2]
@@ -153,8 +157,10 @@ fish_stand = pygame.transform.rotozoom(fish_stand, 0, 2)
 fish_stand_rect = fish_stand.get_rect(center = (400,200))
 game_name = game_font.render('Ocean Escape', False, ("black"))
 game_name_rect = game_name.get_rect(center = (400,75))
-game_message = game_font.render('Press space to start', False, "Black")
-game_message_rect = game_message.get_rect(center = (400,320))
+game_over_message = game_font.render('Game Over', False, "Black")
+game_over_message_rect = game_over_message.get_rect(center = (400,250))
+menu_message = small_font.render("Press space to start", False, "black")
+menu_message_rect = menu_message.get_rect(center = (400, 140))
 collectible_move_1 = pygame.image.load("graphics/lifesaver/lifesaver_move_1.png").convert_alpha()
 collectible_move_1 = pygame.transform.scale(collectible_move_1, (90, 90))
 collectible_move_2 = pygame.image.load("graphics/lifesaver/lifesaver_move_2.png").convert_alpha()
@@ -174,28 +180,37 @@ while running:
 
         elif is_playing:
             # When player wants to jump by pressing SPACE
-            if (
-                event.type == pygame.KEYDOWN
-                and event.key == pygame.K_SPACE
-            ) and fish_rect.bottom >= PLAYER_FLOOR:
-                fish_gravity_speed = JUMP_GRAVITY_START_SPEED
-                jump_sound.play()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                if fish_rect.bottom >= PLAYER_FLOOR:
+                    fish_gravity_speed = JUMP_GRAVITY_START_SPEED
+                    can_double_jump = True
+                    jump_sound.play()
+                elif can_double_jump:
+                    fish_gravity_speed = JUMP_GRAVITY_START_SPEED
+                    can_double_jump = False
+                    jump_sound.play()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
                 is_playing = False
+                game_state = "escaped"
         else:
             # When player wants to play again by pressing SPACE
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                previous_state = game_state
                 is_playing = True
-                start_time = pygame.time.get_ticks()
+                game_state = "playing"
                 baby_shark.stop()
-                baby_shark.play(loops=-1)
-                screen.fill((94,129,162))
-                obstacle_rect_list = []
-                collectible_rect_list = []
-                fish_gravity_speed = 0
-                fish_rect.bottom = PLAYER_FLOOR
-                lives = 3
-                invincibility_timer = 0
+                baby_shark.play(loops=-1) 
+                if previous_state != "escaped":
+                    start_time = pygame.time.get_ticks()
+                    baby_shark.stop()
+                    baby_shark.play(loops=-1)
+                    screen.fill((94,129,162))
+                    obstacle_rect_list = []
+                    collectible_rect_list = []
+                    fish_gravity_speed = 0
+                    fish_rect.bottom = PLAYER_FLOOR
+                    lives = 3
+                    invincibility_timer = 0
         if event.type == obstacle_timer and is_playing:
             if randint(0,2):
                 obstacle_rect_list.append(seaweed_surf.get_rect(bottomright = (randint(900,1100),PLAYER_FLOOR)))
@@ -203,7 +218,7 @@ while running:
                 obstacle_rect_list.append(shark_surf.get_rect(bottomright = (randint(900,1100),210)))
         if event.type == collectible_timer and is_playing:
             #if randint(0,2):
-            collectible_rect_list.append(collectible_surf.get_rect(bottomright = (randint(900,1100), PLAYER_FLOOR - 90)))
+            collectible_rect_list.append(collectible_surf.get_rect(bottomright = (randint(900,1100), PLAYER_FLOOR)))
             
     if is_playing: 
         screen.fill("blue")  # Wipe the screen
@@ -226,23 +241,38 @@ while running:
         display_lives()
 
     # When game is over, display game over message
-    else:
+    elif game_state == "menu":
         screen.blit(MENU_SURF, (0, 0))
         screen.blit(fish_stand, fish_stand_rect)
         screen.blit(game_name, game_name_rect)
+        baby_shark.stop()
+
+    elif game_state == "escaped":
+        screen.blit(MENU_SURF, (0, 0))
+        screen.blit(fish_stand, fish_stand_rect)
+        screen.blit(game_name, game_name_rect)
+        screen.blit(menu_message, menu_message_rect)
         score_message = game_font.render(f'Score: {score}', False, "black")
         score_message_rect = score_message.get_rect(center = (400,350))
-        menu_message = small_font.render("Press space to restart", False, "black")
-        #draw rectangle around text?
-        menu_message_rect = menu_message.get_rect(center = (400, 140))
-        screen.blit(menu_message, menu_message_rect)
+        screen.blit(score_message, score_message_rect)
+        baby_shark.stop()
 
-        if score == 0:
-            screen.blit(game_message, game_message_rect)
-            pygame.mixer.pause()
-        else:
-            screen.blit(score_message, score_message_rect)
-            baby_shark.stop()
+    elif game_state == "game_over":
+        screen.blit(MENU_SURF, (0, 0))
+        screen.blit(game_name, game_name_rect)
+        screen.blit(game_over_message, game_over_message_rect)
+        screen.blit(menu_message, menu_message_rect)
+        score_message = game_font.render(f'Score: {score}', False, "black")
+        score_message_rect = score_message.get_rect(center = (400,350))
+        screen.blit(score_message, score_message_rect)
+        baby_shark.stop()
+
+        #if score == 0:
+            #screen.blit(game_message, game_message_rect)
+            #pygame.mixer.pause()
+        #else:
+            #screen.blit(score_message, score_message_rect)
+            #baby_shark.stop()
             
 
     # flip the display to put your work on screen
